@@ -31,19 +31,16 @@ public class GfxLab {
 				e(Fs::frFrameToneMapping,
 						new EAggregator(
 								e(Fs::transformedColorFunction,
-/*
-										e(Pathtracer::new,
-												e(CityOfNight::new, e(50), e(0x3B660712F3CFA050L)),
+										e(RaytracerSimple::new, // Shadows are currently turned off to simplify rendering of SDF solids.
+												e(TestSDF::new),
 												e(TransformedCamera::new,
-														e(ThinLensFOV::new, e(1.0/3), e(7.0), e(0.1)),
+														e(Perspective::new, e(0.5)),
 														e(Affine.IDENTITY
-																.then(Affine.translation(Vec3.xyz(0, 0, -7)))
-																.then(Affine.rotationAboutX(0.12))
-																.then(Affine.rotationAboutY(-0.1))
+																.then(Affine.translation(Vec3.xyz(0, 0, -3)))
 														)
 												)
 										),
-*/
+/*
 										e(Pathtracer::new,
 												e(ChristmasTree::new),
 												e(TransformedCamera::new,
@@ -54,6 +51,7 @@ public class GfxLab {
 													)
 												)
 										),
+*/
 										e(TransformationsFromSize.toGeometric, eSize)
 								),
 								eSize,

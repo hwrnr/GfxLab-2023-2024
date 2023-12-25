@@ -42,9 +42,9 @@ public class RaytracerSimple extends Raytracer {
 		for (Light light : scene.lights()) {
 			Vec3 l = light.p().sub(p);              // Vector from p to the light;
 			Ray rayToLight = Ray.pd(p, l);
-			if (scene.solid().hitBetween(rayToLight, EPSILON, 1)) {
-				continue;
-			}
+//			if (scene.solid().hitBetween(rayToLight, EPSILON, 1)) {
+//				continue;
+//			}
 			
 			double lLSqr = l.lengthSquared();       // Distance from p to the light squared
 			double lL = Math.sqrt(lLSqr);           // Distance from p to the light
