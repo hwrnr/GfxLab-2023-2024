@@ -1,0 +1,15 @@
+# Napravi providnu sliku
+convert -size 1024x1024 xc:none transparent.png
+
+# iseci sliku
+convert transparent.png Campfire_fire_MAT_BaseColor_Alpha.png fire_part_028.png -composite -trim out.png
+
+# skripta
+
+for i in {00..28}; do
+    IN_FILE="teksture/fire_part_$i.png";
+    OUT_FILE="teksture1/fire_part_$i/providnost.png";
+    mkdir -p "$OUT_FILE" || true;
+    rmdir "$OUT_FILE";
+    convert transparent.png Campfire_fire_MAT_BaseColor_Alpha.png "$IN_FILE" -composite -trim "$OUT_FILE";
+done

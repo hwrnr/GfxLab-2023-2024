@@ -16,6 +16,8 @@ import xyz.marsavic.gfxlab.tonemapping.ColorTransform;
 import xyz.marsavic.gfxlab.tonemapping.matrixcolor_to_colortransforms.AutoSoft;
 import xyz.marsavic.resources.Resource;
 
+import java.nio.file.attribute.AclFileAttributeView;
+
 import static xyz.marsavic.elements.ElementF.e;
 
 
@@ -31,12 +33,14 @@ public class GfxLab {
 				e(Fs::frFrameToneMapping,
 						new EAggregator(
 								e(Fs::transformedColorFunction,
-										e(RaytracerSimple::new, // Shadows are currently turned off to simplify rendering of SDF solids.
-												e(TestSDF::new),
+										e(Pathtracer::new, // Shadows are currently turned off to simplify rendering of SDF solids.
+												e(STLSceneTest::new),
 												e(TransformedCamera::new,
 														e(Perspective::new, e(0.5)),
 														e(Affine.IDENTITY
-																.then(Affine.translation(Vec3.xyz(0, 0, -3)))
+																.then(Affine.rotationAboutY(0.2))
+																.then(Affine.translation(Vec3.xyz(-10, 0, -5)))
+																.then(Affine.rotationAboutX(0.25))
 														)
 												)
 										),
