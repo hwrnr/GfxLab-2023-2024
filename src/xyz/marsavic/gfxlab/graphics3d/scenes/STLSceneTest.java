@@ -20,11 +20,11 @@ public class STLSceneTest extends Scene.Base {
 		
 		solid = STLSolid.group("/home/hawerner/faks/master1/grafika/STL_files");
 
-//		Collections.addAll(lights,
-//				Light.pc(Vec3.xyz(-1, 1, 1), Color.WHITE),
-//				Light.pc(Vec3.xyz( 2, 1, 2), Color.rgb(1.0, 0.5, 0.5)),
-//				Light.pc(Vec3.xyz(0, 0, -1), Color.gray(0.2))
-//		);
+		Collections.addAll(lights,
+				Light.pc(Vec3.xyz(-1, 1, 1), Color.WHITE),
+				Light.pc(Vec3.xyz( 2, 1, 2), Color.rgb(1.0, 0.5, 0.5)),
+				Light.pc(Vec3.xyz(0, 0, -1), Color.gray(0.2))
+		);
 	}
 	
 }

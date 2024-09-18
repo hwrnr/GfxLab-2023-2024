@@ -157,7 +157,7 @@ public class STLSolid implements Solid {
                     texture[i][j] = c;
                 }
             }
-        } catch (IOException ignored) { // Glavni fajl još nema providnost
+        } catch (IOException ignored) { // Glavni fajl još nema teksturu
 //            throw new RuntimeException(e);
             texture = new Color[1][1];
             texture[0][0] = Color.BLACK;
@@ -324,7 +324,23 @@ public class STLSolid implements Solid {
 
         @Override
         public Material material() {
-            return STLSolid.this.mapMaterial.at(uv());
+            if (true) return STLSolid.this.mapMaterial.at(uv());
+            Vector uv = uv();
+            double x1 = uv.x();
+            double y1 = uv.y();
+            int x = (int) (x1 * STLSolid.this.texture.length / STLSolid.this.transparency.length);
+            int y = (int) (y1 * STLSolid.this.texture[0].length / STLSolid.this.transparency[0].length);
+            if (x > STLSolid.this.texture.length) {
+                x = 0;
+            }
+            if (y > STLSolid.this.texture[0].length) {
+                y = 0;
+            }
+            Material m = //Material.light(1).add(
+                    Material.light(
+                STLSolid.this.texture[x][y]
+            );
+            return m;
         }
 
         @Override

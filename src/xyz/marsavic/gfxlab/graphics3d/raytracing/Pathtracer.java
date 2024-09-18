@@ -32,6 +32,7 @@ public class Pathtracer extends Raytracer {
 	
 	
 	private Color radiance(Ray ray, double tFrame, int depthRemaining, Sampler sampler) {
+		tFrame = 0; // DELETE THIS
 		if (depthRemaining <= 0) return Color.BLACK;
 		
 		Hit hit = scene.solid().firstHit(ray, EPSILON, tFrame);

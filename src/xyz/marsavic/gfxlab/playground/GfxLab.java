@@ -28,7 +28,7 @@ public class GfxLab {
 	
 	public GfxLab() {
 		//                       nFrames   width     height
-		var eSize = e(Vec3::new, e(60.0), e(640.0), e(640.0));
+		var eSize = e(Vec3::new, e(1.0), e(640.0), e(640.0));
 		sink =
 				e(Fs::frFrameToneMapping,
 						new EAggregator(
