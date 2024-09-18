@@ -14,11 +14,11 @@ public class RaytracerSimple extends Raytracer {
 	}
 	
 	@Override
-	protected Color sample(Ray ray) {
-		return sample(ray, 64);
+	protected Color sample(Ray ray, double tFrame) {
+		return sample(ray, tFrame, 64);
 	}
 	
-	protected Color sample(Ray ray, int depthRemaining) {
+	protected Color sample(Ray ray, double tFrame, int depthRemaining) {
 		if (depthRemaining <= 0) {
 			return Color.BLACK;
 		}
@@ -42,7 +42,7 @@ public class RaytracerSimple extends Raytracer {
 		for (Light light : scene.lights()) {
 			Vec3 l = light.p().sub(p);              // Vector from p to the light;
 			Ray rayToLight = Ray.pd(p, l);
-			if (scene.solid().hitBetween(rayToLight, EPSILON, 1)) {
+			if (scene.solid().hitBetween(rayToLight, EPSILON, 1, tFrame)) {
 				continue;
 			}
 			
@@ -70,13 +70,13 @@ public class RaytracerSimple extends Raytracer {
 		result = result.add(material.specular().mul(lightSpecular));
 		
 		if (material.reflective().notZero()) {   // When material has reflective properties we recursively find the color visible along the ray (p, r).
-			Color lightReflected = sample(Ray.pd(p, r_), depthRemaining - 1);
+			Color lightReflected = sample(Ray.pd(p, r_), tFrame,depthRemaining - 1);
 			result = result.add(material.reflective().mul(lightReflected));
 		}
 		
 		if (material.refractive().notZero()) {   // When material has refractive properties we recursively find the color visible along the ray (p, f).
 			Vec3 f = GeometryUtils.refractedNN(n_, i_, material.refractiveIndex());
-			Color lightRefracted = sample(Ray.pd(p, f), depthRemaining - 1);
+			Color lightRefracted = sample(Ray.pd(p, f), tFrame,depthRemaining - 1);
 			result = result.add(lightRefracted).mul(material.refractive());
 		}
 		

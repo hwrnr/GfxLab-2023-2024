@@ -18,7 +18,7 @@ public interface SDF extends Solid {
 	int MAX_STEPS = 32;
 	
 	@Override
-	default Hit firstHit(Ray ray, double afterTime) {
+	default Hit firstHit(Ray ray, double afterTime, double tFrame) {
 		Ray ray_ = ray.normalized_();
 		double l = ray.d().length();
 		double t = 0;

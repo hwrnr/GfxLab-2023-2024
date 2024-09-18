@@ -52,7 +52,7 @@ public class Ball implements Solid {
 	
 	
 	@Override
-	public Hit firstHit(Ray ray, double afterTime) {
+	public Hit firstHit(Ray ray, double afterTime, double tFrame) {
 		Vec3 e = c().sub(ray.p());                                // Vector from the ray origin to the ball center
 		
 		double dSqr = ray.d().lengthSquared();

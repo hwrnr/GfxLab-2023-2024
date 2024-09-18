@@ -26,15 +26,15 @@ public class Pathtracer extends Raytracer {
 	
 	
 	@Override
-	protected Color sample(Ray ray) {
-		return radiance(ray, maxDepth, new Sampler(Hashing.mix(seed, ray)));
+	protected Color sample(Ray ray, double t) {
+		return radiance(ray, t, maxDepth, new Sampler(Hashing.mix(seed, ray)));
 	}
 	
 	
-	private Color radiance(Ray ray, int depthRemaining, Sampler sampler) {
+	private Color radiance(Ray ray, double tFrame, int depthRemaining, Sampler sampler) {
 		if (depthRemaining <= 0) return Color.BLACK;
 		
-		Hit hit = scene.solid().firstHit(ray, EPSILON);
+		Hit hit = scene.solid().firstHit(ray, EPSILON, tFrame);
 		if (hit.t() == Double.POSITIVE_INFINITY) {
 			return scene.colorBackground();
 		}
@@ -49,7 +49,7 @@ public class Pathtracer extends Raytracer {
 		if (bsdfResult.color().notZero()) {
 			Vec3 p = ray.at(hit.t());               // Point of collision
 			Ray rayScattered = Ray.pd(p, bsdfResult.out());
-			Color rO = radiance(rayScattered, depthRemaining - 1, sampler);
+			Color rO = radiance(rayScattered, tFrame,depthRemaining - 1, sampler);
 			Color rI = rO.mul(bsdfResult.color());
 			result = result.add(rI);
 		}

@@ -70,7 +70,7 @@ public class Box implements Solid, Iterable<Vec3> {
 	
 	
 	@Override
-	public Hit firstHit(Ray ray, double afterTime) {
+	public Hit firstHit(Ray ray, double afterTime, double tFrame) {
 		Vec3 tP = p().sub(ray.p()).div(ray.d());
 		Vec3 tQ = q().sub(ray.p()).div(ray.d());
 		

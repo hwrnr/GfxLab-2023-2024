@@ -9,7 +9,7 @@ public class Nothing implements Solid {
 	public static final Nothing INSTANCE = new Nothing();
 	
 	@Override
-	public Hit firstHit(Ray ray, double afterTime) {
+	public Hit firstHit(Ray ray, double afterTime, double tFrame) {
 		return Hit.AtInfinity.axisAlignedGoingIn(ray.d());
 	}
 	

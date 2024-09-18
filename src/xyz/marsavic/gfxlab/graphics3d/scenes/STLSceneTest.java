@@ -6,10 +6,7 @@ import xyz.marsavic.gfxlab.Vec3;
 import xyz.marsavic.gfxlab.graphics3d.Light;
 import xyz.marsavic.gfxlab.graphics3d.Material;
 import xyz.marsavic.gfxlab.graphics3d.Scene;
-import xyz.marsavic.gfxlab.graphics3d.solids.Ball;
-import xyz.marsavic.gfxlab.graphics3d.solids.Group;
-import xyz.marsavic.gfxlab.graphics3d.solids.HalfSpace;
-import xyz.marsavic.gfxlab.graphics3d.solids.STLSolid;
+import xyz.marsavic.gfxlab.graphics3d.solids.*;
 import xyz.marsavic.utils.Numeric;
 
 import java.util.Collections;
@@ -19,7 +16,7 @@ public class STLSceneTest extends Scene.Base {
 
 	public STLSceneTest() {
 
-		STLSolid stlSolid = new STLSolid("/home/hawerner/faks/master1/grafika/STL_files/wood");
+//		STLSolid stlSolid = new STLSolid("/home/hawerner/faks/master1/grafika/STL_files/wood");
 		
 		solid = STLSolid.group("/home/hawerner/faks/master1/grafika/STL_files");
 

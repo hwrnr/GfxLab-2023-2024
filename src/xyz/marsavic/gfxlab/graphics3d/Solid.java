@@ -15,17 +15,17 @@ public interface Solid {
 	 * dot product between the normal at the hit and the line direction should alternate. This should also hold for
 	 * the hit at infinity.
 	 */
-	Hit firstHit(Ray ray, double afterTime);
+	Hit firstHit(Ray ray, double afterTime, double t);
 	
 	
-	default Hit firstHit(Ray ray) {
-		return firstHit(ray, 0);
+	default Hit firstHit(Ray ray, double t) {
+		return firstHit(ray, 0, t);
 	}
 	
 	
 	/** Is there any hit between afterTime and beforeTime. */
-	default boolean hitBetween(Ray ray, double afterTime, double beforeTime) {
-		double t = firstHit(ray, afterTime).t();
+	default boolean hitBetween(Ray ray, double afterTime, double beforeTime, double tFrame) {
+		double t = firstHit(ray, afterTime, tFrame).t();
 		return t < beforeTime;
 	}
 	
@@ -36,9 +36,9 @@ public interface Solid {
 			final Affine tInvTransposed = tInv.transposeWithoutTranslation();
 			
 			@Override
-			public Hit firstHit(Ray ray, double afterTime) {
+			public Hit firstHit(Ray ray, double afterTime, double t) {
 				Ray rayO = tInv.at(ray);
-				Hit hitO = Solid.this.firstHit(rayO, afterTime);
+				Hit hitO = Solid.this.firstHit(rayO, afterTime, t);
 				Vec3 n = tInvTransposed.at(hitO.n());
 				return hitO.withN(n);
 			}
@@ -48,14 +48,14 @@ public interface Solid {
 	
 	/** The solid made of all the points contained in at least k of the given solids. */
 	static Solid atLeast(int k, Solid... solids) {
-		return (ray, afterTime) -> {
+		return (ray, afterTime, tFrame) -> {
 			int n = solids.length;
 			Hit[] hits = new Hit[n];
 			int[] d = new int[n];
 			int count = 0;
 			
 			for (int i = 0; i < n; i++) {
-				Hit hit = solids[i].firstHit(ray, afterTime);
+				Hit hit = solids[i].firstHit(ray, afterTime, tFrame);
 				hits[i] = hit;
 				boolean inside = hit.n().dot(ray.d()) > 0;
 				d[i] = inside ? -1 : 1;
@@ -86,14 +86,14 @@ public interface Solid {
 				if (wasInside != isInside) {
 					return hits[iMin];
 				}
-				hits[iMin] = solids[iMin].firstHit(ray, tHitMin);
+				hits[iMin] = solids[iMin].firstHit(ray, tHitMin, tFrame);
 			}
 		};
 	}
 	
 	default Solid withMaterial(F1<Material, Vector> mapMaterial) {
-		return (ray, afterTime) -> {
-			Hit hit = Solid.this.firstHit(ray, afterTime);
+		return (ray, afterTime, t) -> {
+			Hit hit = Solid.this.firstHit(ray, afterTime, t);
 			return hit.withMaterial(mapMaterial.at(hit.uv()));
 		};
 	}
@@ -109,8 +109,8 @@ public interface Solid {
 	
 	
 	default Solid complement() {
-		return (ray, afterTime) -> {
-			Hit hit = Solid.this.firstHit(ray, afterTime);
+		return (ray, afterTime, t) -> {
+			Hit hit = Solid.this.firstHit(ray, afterTime, t);
 			return hit.inverted();
 		};
 	}

@@ -20,12 +20,12 @@ public abstract class Raytracer implements ColorFunctionT {
 	}
 	
 	
-	protected abstract Color sample(Ray ray);
+	protected abstract Color sample(Ray ray, double t);
 	
 	
 	@Override
 	public Color at(double t, Vector p) {
-		return sample(camera.exitingRay(p));
+		return sample(camera.exitingRay(p), (t + 1) / 2);
 	}
 	
 }

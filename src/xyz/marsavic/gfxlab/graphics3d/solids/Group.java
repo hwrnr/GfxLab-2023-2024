@@ -26,12 +26,12 @@ public class Group implements Solid {
 	
 	
 	@Override
-	public Hit firstHit(Ray ray, double afterTime) {
-		Hit minHit = Nothing.INSTANCE.firstHit(ray, afterTime);
+	public Hit firstHit(Ray ray, double afterTime, double tFrame) {
+		Hit minHit = Nothing.INSTANCE.firstHit(ray, afterTime, tFrame);
 		double minT = minHit.t();
 		
 		for (Solid solid : solids) {
-			Hit hit = solid.firstHit(ray, afterTime);
+			Hit hit = solid.firstHit(ray, afterTime, tFrame);
 			double t = hit.t();
 			if (t < minT) {
 				minT = t;
@@ -43,9 +43,9 @@ public class Group implements Solid {
 	}
 	
 	@Override
-	public boolean hitBetween(Ray ray, double afterTime, double beforeTime) {
+	public boolean hitBetween(Ray ray, double afterTime, double beforeTime, double tFrame) {
 		for (Solid solid : solids) {
-			if (solid.firstHit(ray, afterTime).t() < beforeTime) {
+			if (solid.firstHit(ray, afterTime, tFrame).t() < beforeTime) {
 				return true;
 			}
 		}

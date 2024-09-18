@@ -1,5 +1,6 @@
 package xyz.marsavic.gfxlab.graphics3d.solids;
 
+import javafx.util.Pair;
 import xyz.marsavic.functions.F1;
 import xyz.marsavic.geometry.Vec;
 import xyz.marsavic.geometry.Vector;
@@ -13,6 +14,7 @@ import xyz.marsavic.gfxlab.helper.Vec3Comparator;
 
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
 
@@ -42,19 +44,32 @@ public class STLSolid implements Solid {
     static final String STL_FILE = "/object.stl";
     static final String LIGHT_FILE = "/light";
     static final String TRANSPARENCY_FILE = "/providnost.png";
+    static final String ANIMATION_DELAY_FILE = "/delay";
+    static final String TEXTURE_FILE = "/tekstura.png";
 
-    private List<Triangle> triangleList = new LinkedList<>();
+    private List<Pair<Triangle, Vec3>> triangleList = new LinkedList<>();
+
+    private final Box boundingBox;
 
     private final F1<Material, Vector> mapMaterial;
 
     private double[][] transparency; // Bolje ime bi bilo opacity
+    private Color[][] texture;
 
     private List<Vec3> temena = new ArrayList<>(4);
+
+    private boolean isAnimated = false;
+    private double delay = 0.0;
+    private double height = 0.0;
 
     public STLSolid(String folderPath) {
         String filePath = folderPath + STL_FILE;
 
-        Material material = Material.matte(Color.hsb(180, 0.6, 0.8));
+//        Material material = Material.matte(Color.hsb(180, 0.6, 0.8));
+        Material material = Material.matte(Color.rgb(1, 0, 0));
+
+        double minX = Double.POSITIVE_INFINITY, minY = Double.POSITIVE_INFINITY, minZ = Double.POSITIVE_INFINITY;
+        double maxX = Double.NEGATIVE_INFINITY, maxY = Double.NEGATIVE_INFINITY, maxZ = Double.NEGATIVE_INFINITY;
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
 
@@ -78,20 +93,42 @@ public class STLSolid implements Solid {
                 }
                 br.readLine();
                 br.readLine();
-                triangleList.add(new Triangle(points[0], points[1], points[2], n));
+                Triangle triangle = new Triangle(points[0], points[1], points[2], n);
+                Vec3 cooef = (triangle.v0.sub(triangle.v1).cross(triangle.v0.sub(triangle.v2))).normalized_();
+                triangleList.add(new Pair<>(triangle, cooef));
+
+                for (Vec3 vec : points) {
+                    minX = Math.min(minX, vec.x());
+                    minY = Math.min(minY, vec.y());
+                    minZ = Math.min(minZ, vec.z());
+                    maxX = Math.max(maxX, vec.x());
+                    maxY = Math.max(maxY, vec.y());
+                    maxZ = Math.max(maxZ, vec.z());
+                }
             }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
+        height = maxZ - minZ;
+        boundingBox = Box.$.pq(Vec3.xyz(minX, minY, minZ), Vec3.xyz(maxX, maxY, maxZ));
 
         try (BufferedReader br = new BufferedReader(new FileReader(folderPath + LIGHT_FILE))) {
             String l = br.readLine();
             if (!Objects.equals(l, "0")) {
                 double light = Double.parseDouble(l);
-                material = material.add(Material.light(light));
+                material = material.add(Material.light(Color.rgb(light, 0, 0)));
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+
+        try (BufferedReader br = new BufferedReader(new FileReader(folderPath + ANIMATION_DELAY_FILE))) {
+            String l = br.readLine();
+            delay = Double.parseDouble(l);
+            isAnimated = true;
+        } catch (IOException ignored) {
+//            throw new RuntimeException(e);
         }
 
         try {
@@ -110,18 +147,35 @@ public class STLSolid implements Solid {
             transparency[0][0] = 1;
         }
 
+        try {
+            BufferedImage img = javax.imageio.ImageIO.read(new File(folderPath + TEXTURE_FILE));
+
+            texture = new Color[img.getWidth()][img.getHeight()];
+            for (int i = 0; i < img.getWidth(); ++i) {
+                for (int j = 0; j < img.getHeight(); ++j) {
+                    Color c = Color.rgb(1, 0, 0).mul(new java.awt.Color(img.getRGB(i, j)).getRed());
+                    texture[i][j] = c;
+                }
+            }
+        } catch (IOException ignored) { // Glavni fajl još nema providnost
+//            throw new RuntimeException(e);
+            texture = new Color[1][1];
+            texture[0][0] = Color.BLACK;
+        }
+
         this.mapMaterial = material;
+//        System.out.println(material);
 
         if (triangleList.size() == 2) {
             // Ovo sigurno može pametnije... Al' nije strašno, pokreće se samo jednom
             Vec3[] koordinateCetvorougla = new Vec3[6];
-            koordinateCetvorougla[0] = triangleList.getFirst().v0;
-            koordinateCetvorougla[1] = triangleList.getFirst().v1;
-            koordinateCetvorougla[2] = triangleList.getFirst().v2;
+            koordinateCetvorougla[0] = triangleList.getFirst().getKey().v0;
+            koordinateCetvorougla[1] = triangleList.getFirst().getKey().v1;
+            koordinateCetvorougla[2] = triangleList.getFirst().getKey().v2;
 
-            koordinateCetvorougla[3] = triangleList.get(1).v0;
-            koordinateCetvorougla[4] = triangleList.get(1).v1;
-            koordinateCetvorougla[5] = triangleList.get(1).v2;
+            koordinateCetvorougla[3] = triangleList.get(1).getKey().v0;
+            koordinateCetvorougla[4] = triangleList.get(1).getKey().v1;
+            koordinateCetvorougla[5] = triangleList.get(1).getKey().v2;
 
             Vec3Comparator cmp = new Vec3Comparator();
 
@@ -165,12 +219,28 @@ public class STLSolid implements Solid {
     }
 
     @Override
-    public Hit firstHit(Ray ray, double afterTime) {
+    public Hit firstHit(Ray originalRay, double afterTime, double t) {
+        Ray ray;
+        if (isAnimated) {
+            double newT = t - delay;
+            if (newT < 0) {
+                newT += 1;
+            }
+            ray = Ray.pd(originalRay.p().sub(Vec3.EZ.mul(height).mul(newT)), originalRay.d());
+        }
+        else {
+            ray = originalRay;
+        }
         Hit bestHit = Hit.AtInfinity.axisAlignedGoingIn(ray.d());
 
-        for (Triangle t : this.triangleList) {
-            Vec3 cooef = (t.v0.sub(t.v1).cross(t.v0.sub(t.v2))).normalized_();
-            double d = -(t.v2.dot(cooef));
+        if (boundingBox.firstHit(ray, afterTime, t).getClass() == Hit.AtInfinity.class) {
+            return bestHit;
+        }
+
+        for (Pair<Triangle, Vec3> pair: this.triangleList) {
+            Triangle triangle = pair.getKey();
+            Vec3 cooef = pair.getValue();
+            double d = -(triangle.v2.dot(cooef));
             double k = - (ray.p().dot(cooef) + d ) / (ray.d().dot(cooef));
 
             if (k < 0.0) {
@@ -179,8 +249,8 @@ public class STLSolid implements Solid {
             }
 
             Vec3 tackaUdara = ray.at(k);
-            double area1 = t.area();
-            double area2 = Triangle.area(tackaUdara, t.v1, t.v2) + Triangle.area(t.v0, tackaUdara, t.v2) + Triangle.area(t.v0, t.v1, tackaUdara);
+            double area1 = triangle.area();
+            double area2 = Triangle.area(tackaUdara, triangle.v1, triangle.v2) + Triangle.area(triangle.v0, tackaUdara, triangle.v2) + Triangle.area(triangle.v0, triangle.v1, tackaUdara);
 
             if (Double.isNaN(area1 - area2)) {
                 continue;
@@ -269,6 +339,6 @@ public class STLSolid implements Solid {
 class Program {
     public static void main(String[] args) {
         STLSolid stlSolid = new STLSolid("/home/hawerner/faks/master1/grafika/STL_files/wood");
-        System.out.println(stlSolid.firstHit(new Ray(new Vec3(0, 0, 0), new Vec3(0, 0, 1))));
+//        System.out.println(stlSolid.firstHit(new Ray(new Vec3(0, 0, 0), new Vec3(0, 0, 1))));
     }
 }

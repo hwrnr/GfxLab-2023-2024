@@ -1,8 +1,14 @@
 # Napravi providnu sliku
 convert -size 1024x1024 xc:none transparent.png
 
+# Kopiraj sa Campfire_fire_MAT_BaseColor_Alpha samo delove koji su beli u fire_part_02.png
+convert fire_part_02.png Campfire_fire_MAT_BaseColor_Alpha.png -compose SrcIn -composite cropped_texture.png
+
 # iseci sliku
 convert transparent.png Campfire_fire_MAT_BaseColor_Alpha.png fire_part_028.png -composite -trim out.png
+
+# iseci sliku, ali zadrži boje
+convert cropped_texture.png transparent.png  -composite -trim out.png
 
 # skripta
 
@@ -13,3 +19,15 @@ for i in {00..28}; do
     rmdir "$OUT_FILE";
     convert transparent.png Campfire_fire_MAT_BaseColor_Alpha.png "$IN_FILE" -composite -trim "$OUT_FILE";
 done
+
+
+# skripta teksture
+
+for i in {00..28}; do
+    IN_FILE="teksture/fire_part_$i.png"
+    OUT_FILE="teksture1/fire_part_$i/tekstura.png";
+    mkdir -p "$OUT_FILE" || true;
+    rmdir "$OUT_FILE" || true;
+    convert "$IN_FILE" Campfire_fire_MAT_BaseColor_Alpha.png -compose SrcIn -composite cropped_texture.png
+    convert cropped_texture.png transparent.png  -composite -trim "$OUT_FILE";
+done;
