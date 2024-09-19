@@ -28,7 +28,7 @@ public class GfxLab {
 	
 	public GfxLab() {
 		//                       nFrames   width     height
-		var eSize = e(Vec3::new, e(1.0), e(640.0), e(640.0));
+		var eSize = e(Vec3::new, e(60.0), e(640.0), e(640.0));
 		sink =
 				e(Fs::frFrameToneMapping,
 						new EAggregator(
@@ -41,6 +41,9 @@ public class GfxLab {
 																.then(Affine.rotationAboutY(0.2))
 																.then(Affine.translation(Vec3.xyz(-10, 0, -5)))
 																.then(Affine.rotationAboutX(0.25))
+																.then(Affine.rotationAboutZ(-0.2))
+																.then(Affine.translation(Vec3.EX.mul(-1)))
+																.then(Affine.translation(Vec3.EZ.mul(2)))
 														)
 												)
 										),

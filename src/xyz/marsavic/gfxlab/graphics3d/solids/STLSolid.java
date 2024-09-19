@@ -113,6 +113,9 @@ public class STLSolid implements Solid {
         height = maxZ - minZ;
         boundingBox = Box.$.pq(Vec3.xyz(minX, minY, minZ), Vec3.xyz(maxX, maxY, maxZ));
 
+        System.out.println(Vec3.xyz(minX, minY, minZ));
+        System.out.println(Vec3.xyz(maxX, maxY, maxZ));
+
         try (BufferedReader br = new BufferedReader(new FileReader(folderPath + LIGHT_FILE))) {
             String l = br.readLine();
             if (!Objects.equals(l, "0")) {
@@ -153,8 +156,9 @@ public class STLSolid implements Solid {
             texture = new Color[img.getWidth()][img.getHeight()];
             for (int i = 0; i < img.getWidth(); ++i) {
                 for (int j = 0; j < img.getHeight(); ++j) {
-                    Color c = Color.rgb(1, 0, 0).mul(new java.awt.Color(img.getRGB(i, j)).getRed());
-                    texture[i][j] = c;
+                    java.awt.Color c = new java.awt.Color(img.getRGB(i, j));
+                    Color color = Color.rgb(c.getRed(), c.getGreen(), c.getBlue());
+                    texture[i][j] = color;
                 }
             }
         } catch (IOException ignored) { // Glavni fajl još nema teksturu
@@ -223,6 +227,7 @@ public class STLSolid implements Solid {
         Ray ray;
         if (isAnimated) {
             double newT = t - delay;
+            // TODO: newT should be sin or something
             if (newT < 0) {
                 newT += 1;
             }
@@ -233,6 +238,9 @@ public class STLSolid implements Solid {
         }
         Hit bestHit = Hit.AtInfinity.axisAlignedGoingIn(ray.d());
 
+        if (false) {
+            return boundingBox.firstHit(ray, afterTime, t);
+        }
         if (boundingBox.firstHit(ray, afterTime, t).getClass() == Hit.AtInfinity.class) {
             return bestHit;
         }
@@ -288,6 +296,15 @@ public class STLSolid implements Solid {
                     if (y < 0) y = 0;
 
                     if (random < transparency[x][y]) {
+                        x = (int) (a * texture.length);
+                        y = (int) (b * texture[0].length);
+
+                        if (x >= texture.length) x = texture.length - 1;
+                        if (y >= texture[0].length) y = texture[0].length - 1;
+
+                        if (x < 0) x = 0;
+                        if (y < 0) y = 0;
+
                         bestHit = new HitStlSolid(k, cooef, Vector.xy(x, y));
                     }
                 }
@@ -324,18 +341,12 @@ public class STLSolid implements Solid {
 
         @Override
         public Material material() {
-            if (true) return STLSolid.this.mapMaterial.at(uv());
+//            if (true) return STLSolid.this.mapMaterial.at(uv());
             Vector uv = uv();
-            double x1 = uv.x();
-            double y1 = uv.y();
-            int x = (int) (x1 * STLSolid.this.texture.length / STLSolid.this.transparency.length);
-            int y = (int) (y1 * STLSolid.this.texture[0].length / STLSolid.this.transparency[0].length);
-            if (x > STLSolid.this.texture.length) {
-                x = 0;
-            }
-            if (y > STLSolid.this.texture[0].length) {
-                y = 0;
-            }
+
+            int x = uv.xInt();
+            int y = uv.yInt();;
+
             Material m = //Material.light(1).add(
                     Material.light(
                 STLSolid.this.texture[x][y]
