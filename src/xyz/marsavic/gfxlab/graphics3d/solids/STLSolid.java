@@ -347,8 +347,7 @@ public class STLSolid implements Solid {
             int x = uv.xInt();
             int y = uv.yInt();;
 
-            Material m = //Material.light(1).add(
-                    Material.light(
+            Material m = Material.light(
                 STLSolid.this.texture[x][y]
             );
             return m;
