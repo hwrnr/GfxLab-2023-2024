@@ -164,7 +164,7 @@ public class STLSolid implements Solid {
         } catch (IOException ignored) { // Glavni fajl još nema teksturu
 //            throw new RuntimeException(e);
             texture = new Color[1][1];
-            texture[0][0] = Color.BLACK;
+            texture[0][0] = Color.rgb(0.66, 0.33, 0);
         }
 
         this.mapMaterial = material;
