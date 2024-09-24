@@ -61,12 +61,10 @@ public class STLSolid implements Solid {
     private boolean isAnimated = false;
     private double delay = 0.0;
     private double height = 0.0;
+    private double light = 0.0;
 
     public STLSolid(String folderPath) {
         String filePath = folderPath + STL_FILE;
-
-//        Material material = Material.matte(Color.hsb(180, 0.6, 0.8));
-        Material material = Material.matte(Color.rgb(1, 0, 0));
 
         double minX = Double.POSITIVE_INFINITY, minY = Double.POSITIVE_INFINITY, minZ = Double.POSITIVE_INFINITY;
         double maxX = Double.NEGATIVE_INFINITY, maxY = Double.NEGATIVE_INFINITY, maxZ = Double.NEGATIVE_INFINITY;
@@ -113,14 +111,10 @@ public class STLSolid implements Solid {
         height = maxZ - minZ;
         boundingBox = Box.$.pq(Vec3.xyz(minX, minY, minZ), Vec3.xyz(maxX, maxY, maxZ));
 
-        System.out.println(Vec3.xyz(minX, minY, minZ));
-        System.out.println(Vec3.xyz(maxX, maxY, maxZ));
-
         try (BufferedReader br = new BufferedReader(new FileReader(folderPath + LIGHT_FILE))) {
             String l = br.readLine();
             if (!Objects.equals(l, "0")) {
-                double light = Double.parseDouble(l);
-                material = material.add(Material.light(Color.rgb(light, 0, 0)));
+                this.light = Double.parseDouble(l);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -167,8 +161,12 @@ public class STLSolid implements Solid {
             texture[0][0] = Color.rgb(0.66, 0.33, 0);
         }
 
-        this.mapMaterial = material;
-//        System.out.println(material);
+//        this.mapMaterial = material;
+        this.mapMaterial = (v) -> {
+            int x = v.xInt();
+            int y = v.yInt();
+            return Material.light(this.texture[x][y]).mul(light);
+        };
 
         if (triangleList.size() == 2) {
             // Ovo sigurno može pametnije... Al' nije strašno, pokreće se samo jednom
@@ -341,16 +339,7 @@ public class STLSolid implements Solid {
 
         @Override
         public Material material() {
-//            if (true) return STLSolid.this.mapMaterial.at(uv());
-            Vector uv = uv();
-
-            int x = uv.xInt();
-            int y = uv.yInt();;
-
-            Material m = Material.light(
-                STLSolid.this.texture[x][y]
-            );
-            return m;
+            return STLSolid.this.mapMaterial.at(uv());
         }
 
         @Override
