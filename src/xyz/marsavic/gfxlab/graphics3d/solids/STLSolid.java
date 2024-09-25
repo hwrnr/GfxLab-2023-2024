@@ -18,16 +18,18 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
 
-class Triangle {
+class Triangle implements Solid {
     Vec3 v0, v1, v2, n;
     double area;
+    Vec3 coef;
 
-    public Triangle(Vec3 v0, Vec3 v1, Vec3 v2, Vec3 n) {
+    public Triangle(Vec3 v0, Vec3 v1, Vec3 v2, Vec3 n, Vec3 coef) {
         this.v0 = v0;
         this.v1 = v1;
         this.v2 = v2;
         this.n = n;
         this.area = area(v0, v1, v2);
+        this.coef = coef;
     }
 
     public double area() {
@@ -36,6 +38,71 @@ class Triangle {
 
     public static double area(Vec3 v0, Vec3 v1, Vec3 v2) {
         return v1.sub(v0).cross(v2.sub(v0)).length() / 2;
+    }
+
+    @Override
+    public Hit firstHit(Ray ray, double afterTime, double t) {
+        // Logiku za t računam ranije zbog jednostavnosti koda
+        Triangle triangle = this;
+        Vec3 cooef = this.coef;
+        double d = -(triangle.v2.dot(cooef));
+        double k = - (ray.p().dot(cooef) + d ) / (ray.d().dot(cooef));
+
+        if (k < 0.0) {
+            // Udarac se desio iza kamere
+            return Hit.AtInfinity.axisAligned(ray.d(), false);
+        }
+
+        Vec3 tackaUdara = ray.at(k);
+        double area1 = triangle.area();
+        double area2 = Triangle.area(tackaUdara, triangle.v1, triangle.v2) + Triangle.area(triangle.v0, tackaUdara, triangle.v2) + Triangle.area(triangle.v0, triangle.v1, tackaUdara);
+
+        if (Double.isNaN(area1 - area2)) {
+            return Hit.AtInfinity.axisAligned(ray.d(), false);
+        }
+
+        if (Math.abs(area1 - area2) > 0.001) {
+            return Hit.AtInfinity.axisAligned(ray.d(), false);
+        }
+        return new HitTriangle(k, Vec3.ZERO, Vector.ZERO, tackaUdara);
+    }
+
+    final class HitTriangle implements Hit {
+        private final double t;
+        private final Vec3 n_;
+        private final Vector uv;
+        private final Vec3 tackaUdara;
+
+        HitTriangle(double t, Vec3 n_, Vector uv, Vec3 tackaUdara) {
+            this.t = t;
+            this.n_ = n_;
+            this.uv = uv;
+            this.tackaUdara = tackaUdara;
+        }
+
+        public Vec3 getTackaUdara() {
+            return this.tackaUdara;
+        }
+
+        @Override
+        public double t() {
+            return t;
+        }
+
+        @Override
+        public Vec3 n() {
+            return n_;
+        }
+
+        @Override
+        public Material material() {
+            return Material.DEFAULT; // Ovo se nigde ne koristi
+        }
+
+        @Override
+        public Vector uv() {
+            return this.uv;
+        }
     }
 }
 
@@ -47,7 +114,7 @@ public class STLSolid implements Solid {
     static final String ANIMATION_DELAY_FILE = "/delay";
     static final String TEXTURE_FILE = "/tekstura.png";
 
-    private List<Pair<Triangle, Vec3>> triangleList = new LinkedList<>();
+    private List<Triangle> triangleList = new LinkedList<>();
 
     private final Box boundingBox;
 
@@ -91,9 +158,12 @@ public class STLSolid implements Solid {
                 }
                 br.readLine();
                 br.readLine();
-                Triangle triangle = new Triangle(points[0], points[1], points[2], n);
-                Vec3 cooef = (triangle.v0.sub(triangle.v1).cross(triangle.v0.sub(triangle.v2))).normalized_();
-                triangleList.add(new Pair<>(triangle, cooef));
+                Vec3 v0 = points[0];
+                Vec3 v1 = points[1];
+                Vec3 v2 = points[2];
+                Vec3 coef = (v0.sub(v1).cross(v0.sub(v2))).normalized_();
+                Triangle triangle = new Triangle(points[0], points[1], points[2], n, coef);
+                triangleList.add(triangle);
 
                 for (Vec3 vec : points) {
                     minX = Math.min(minX, vec.x());
@@ -171,13 +241,13 @@ public class STLSolid implements Solid {
         if (triangleList.size() == 2) {
             // Ovo sigurno može pametnije... Al' nije strašno, pokreće se samo jednom
             Vec3[] koordinateCetvorougla = new Vec3[6];
-            koordinateCetvorougla[0] = triangleList.getFirst().getKey().v0;
-            koordinateCetvorougla[1] = triangleList.getFirst().getKey().v1;
-            koordinateCetvorougla[2] = triangleList.getFirst().getKey().v2;
+            koordinateCetvorougla[1] = triangleList.getFirst().v1;
+            koordinateCetvorougla[2] = triangleList.getFirst().v2;
+            koordinateCetvorougla[0] = triangleList.getFirst().v0;
 
-            koordinateCetvorougla[3] = triangleList.get(1).getKey().v0;
-            koordinateCetvorougla[4] = triangleList.get(1).getKey().v1;
-            koordinateCetvorougla[5] = triangleList.get(1).getKey().v2;
+            koordinateCetvorougla[3] = triangleList.get(1).v0;
+            koordinateCetvorougla[4] = triangleList.get(1).v1;
+            koordinateCetvorougla[5] = triangleList.get(1).v2;
 
             Vec3Comparator cmp = new Vec3Comparator();
 
@@ -236,40 +306,23 @@ public class STLSolid implements Solid {
         }
         Hit bestHit = Hit.AtInfinity.axisAlignedGoingIn(ray.d());
 
-        if (false) {
-            return boundingBox.firstHit(ray, afterTime, t);
-        }
         if (boundingBox.firstHit(ray, afterTime, t).getClass() == Hit.AtInfinity.class) {
             return bestHit;
         }
 
-        for (Pair<Triangle, Vec3> pair: this.triangleList) {
-            Triangle triangle = pair.getKey();
-            Vec3 cooef = pair.getValue();
-            double d = -(triangle.v2.dot(cooef));
-            double k = - (ray.p().dot(cooef) + d ) / (ray.d().dot(cooef));
-
-            if (k < 0.0) {
-                // Udarac se desio iza kamere
+        for (Triangle triangle: this.triangleList) {
+            Hit hit1 = triangle.firstHit(ray, 0);
+            if (hit1.getClass() == Hit.AtInfinity.class) {
                 continue;
             }
-
-            Vec3 tackaUdara = ray.at(k);
-            double area1 = triangle.area();
-            double area2 = Triangle.area(tackaUdara, triangle.v1, triangle.v2) + Triangle.area(triangle.v0, tackaUdara, triangle.v2) + Triangle.area(triangle.v0, triangle.v1, tackaUdara);
-
-            if (Double.isNaN(area1 - area2)) {
-                continue;
-            }
-
-            if (Math.abs(area1 - area2) > 0.001) {
-                continue;
-            }
-            if (bestHit.t() > k && k > afterTime) {
+            Triangle.HitTriangle hit = (Triangle.HitTriangle) hit1;
+            if (bestHit.t() > hit.t() && hit.t() > afterTime) {
 
                 if (!temena.isEmpty()) {
 
                     double random = Math.random();
+
+                    Vec3 tackaUdara = hit.getTackaUdara();
 
                     Vec3 v1 = temena.get(1).sub(temena.get(0));
                     Vec3 v2 = temena.get(3).sub(temena.get(0));
@@ -303,11 +356,11 @@ public class STLSolid implements Solid {
                         if (x < 0) x = 0;
                         if (y < 0) y = 0;
 
-                        bestHit = new HitStlSolid(k, cooef, Vector.xy(x, y));
+                        bestHit = new HitStlSolid(hit.t(), triangle.coef, Vector.xy(x, y));
                     }
                 }
                 else {
-                    bestHit = new HitStlSolid(k, cooef, Vector.ZERO);
+                    bestHit = new HitStlSolid(hit.t(), triangle.coef, Vector.ZERO);
                 }
             }
         }
