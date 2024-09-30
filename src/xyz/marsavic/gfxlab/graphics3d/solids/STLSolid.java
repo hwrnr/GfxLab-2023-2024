@@ -1,24 +1,18 @@
 package xyz.marsavic.gfxlab.graphics3d.solids;
 
-import javafx.util.Pair;
 import xyz.marsavic.functions.F1;
-import xyz.marsavic.geometry.Vec;
 import xyz.marsavic.geometry.Vector;
 import xyz.marsavic.gfxlab.Vec3;
 import xyz.marsavic.gfxlab.Color;
-import xyz.marsavic.gfxlab.graphics3d.Hit;
-import xyz.marsavic.gfxlab.graphics3d.Material;
-import xyz.marsavic.gfxlab.graphics3d.Ray;
-import xyz.marsavic.gfxlab.graphics3d.Solid;
+import xyz.marsavic.gfxlab.graphics3d.*;
 import xyz.marsavic.gfxlab.helper.Vec3Comparator;
 
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
 
-class Triangle implements Solid {
+class Triangle extends Solid {
     Vec3 v0, v1, v2, n;
     double area;
     Vec3 coef;
@@ -30,14 +24,43 @@ class Triangle implements Solid {
         this.n = n;
         this.area = area(v0, v1, v2);
         this.coef = coef;
+
+        double minX = Double.POSITIVE_INFINITY, minY = Double.POSITIVE_INFINITY, minZ = Double.POSITIVE_INFINITY;
+        double maxX = Double.NEGATIVE_INFINITY, maxY = Double.NEGATIVE_INFINITY, maxZ = Double.NEGATIVE_INFINITY;
+
+        List<Vec3> points = new ArrayList<>(3);
+        Collections.addAll(points, v0, v1, v2);
+
+        for (Vec3 vec : points) {
+            minX = Math.min(minX, vec.x());
+            minY = Math.min(minY, vec.y());
+            minZ = Math.min(minZ, vec.z());
+            maxX = Math.max(maxX, vec.x());
+            maxY = Math.max(maxY, vec.y());
+            maxZ = Math.max(maxZ, vec.z());
+        }
+
+        this.boundingBox = BoundingBox.$.pq(new Vec3(minX, minY, minZ), new Vec3(maxX, maxY, maxZ));
+
     }
 
-    public double area() {
+    public double getArea() {
         return this.area;
     }
 
     public static double area(Vec3 v0, Vec3 v1, Vec3 v2) {
         return v1.sub(v0).cross(v2.sub(v0)).length() / 2;
+    }
+
+    @Override
+    public boolean intersects(BoundingBox boundingBox) {
+        return intervalsIntersect(this.boundingBox.p().x(), this.boundingBox.q().x(), boundingBox.p().x(), boundingBox.q().x())
+                && intervalsIntersect(this.boundingBox.p().y(), this.boundingBox.q().y(), boundingBox.p().y(), boundingBox.q().y())
+                && intervalsIntersect(this.boundingBox.p().z(), this.boundingBox.q().z(), boundingBox.p().z(), boundingBox.q().z());
+    }
+
+    private boolean intervalsIntersect(double min1, double max1, double min2, double max2){
+        return !(max1 < min2 || max2 < min1);
     }
 
     @Override
@@ -54,7 +77,7 @@ class Triangle implements Solid {
         }
 
         Vec3 tackaUdara = ray.at(k);
-        double area1 = triangle.area();
+        double area1 = triangle.getArea();
         double area2 = Triangle.area(tackaUdara, triangle.v1, triangle.v2) + Triangle.area(triangle.v0, tackaUdara, triangle.v2) + Triangle.area(triangle.v0, triangle.v1, tackaUdara);
 
         if (Double.isNaN(area1 - area2)) {
@@ -64,7 +87,7 @@ class Triangle implements Solid {
         if (Math.abs(area1 - area2) > 0.001) {
             return Hit.AtInfinity.axisAligned(ray.d(), false);
         }
-        return new HitTriangle(k, Vec3.ZERO, Vector.ZERO, tackaUdara);
+        return new HitTriangle(k, this.coef, Vector.ZERO, tackaUdara);
     }
 
     final class HitTriangle implements Hit {
@@ -106,7 +129,7 @@ class Triangle implements Solid {
     }
 }
 
-public class STLSolid implements Solid {
+public class STLSolid extends Solid {
 
     static final String STL_FILE = "/object.stl";
     static final String LIGHT_FILE = "/light";
@@ -114,9 +137,11 @@ public class STLSolid implements Solid {
     static final String ANIMATION_DELAY_FILE = "/delay";
     static final String TEXTURE_FILE = "/tekstura.png";
 
-    private List<Triangle> triangleList = new LinkedList<>();
+    private List<Solid> triangleList = new LinkedList<>();
 
-    private final Box boundingBox;
+    private MyGroupWithSAH triangleGroup;
+
+    private final Box mojBoundingBox;
 
     private final F1<Material, Vector> mapMaterial;
 
@@ -179,7 +204,8 @@ public class STLSolid implements Solid {
             e.printStackTrace();
         }
         height = maxZ - minZ;
-        boundingBox = Box.$.pq(Vec3.xyz(minX, minY, minZ), Vec3.xyz(maxX, maxY, maxZ));
+        mojBoundingBox = Box.$.pq(Vec3.xyz(minX, minY, minZ), Vec3.xyz(maxX, maxY, maxZ));
+        this.boundingBox = BoundingBox.$.pq(Vec3.xyz(minX, minY, minZ), Vec3.xyz(maxX, maxY, maxZ));
 
         try (BufferedReader br = new BufferedReader(new FileReader(folderPath + LIGHT_FILE))) {
             String l = br.readLine();
@@ -235,19 +261,25 @@ public class STLSolid implements Solid {
         this.mapMaterial = (v) -> {
             int x = v.xInt();
             int y = v.yInt();
-            return Material.light(this.texture[x][y]).mul(light);
+            return Material.matte(this.texture[x][y]).mul(light);
         };
+
+        this.triangleGroup = MyGroupWithSAH.of(triangleList);
 
         if (triangleList.size() == 2) {
             // Ovo sigurno može pametnije... Al' nije strašno, pokreće se samo jednom
             Vec3[] koordinateCetvorougla = new Vec3[6];
-            koordinateCetvorougla[1] = triangleList.getFirst().v1;
-            koordinateCetvorougla[2] = triangleList.getFirst().v2;
-            koordinateCetvorougla[0] = triangleList.getFirst().v0;
 
-            koordinateCetvorougla[3] = triangleList.get(1).v0;
-            koordinateCetvorougla[4] = triangleList.get(1).v1;
-            koordinateCetvorougla[5] = triangleList.get(1).v2;
+            Triangle t = (Triangle) triangleList.getFirst();
+            Triangle t1 = (Triangle) triangleList.get(1);
+
+            koordinateCetvorougla[1] = t.v1;
+            koordinateCetvorougla[2] = t.v2;
+            koordinateCetvorougla[0] = t.v0;
+
+            koordinateCetvorougla[3] = t1.v0;
+            koordinateCetvorougla[4] = t1.v1;
+            koordinateCetvorougla[5] = t1.v2;
 
             Vec3Comparator cmp = new Vec3Comparator();
 
@@ -275,6 +307,11 @@ public class STLSolid implements Solid {
         }
     }
 
+    @Override
+    public boolean intersects(BoundingBox boundingBox) {
+        return triangleGroup.intersects(boundingBox);
+    }
+
     public static Solid group(String dirPath) {
         Collection<Solid> stlSolids = new LinkedList<>();
         File f = new File(dirPath);
@@ -291,10 +328,10 @@ public class STLSolid implements Solid {
     }
 
     @Override
-    public Hit firstHit(Ray originalRay, double afterTime, double t) {
+    public Hit firstHit(Ray originalRay, double afterTime, double tFrame) {
         Ray ray;
         if (isAnimated) {
-            double newT = t - delay;
+            double newT = tFrame - delay;
             // TODO: newT should be sin or something
             if (newT < 0) {
                 newT += 1;
@@ -306,63 +343,59 @@ public class STLSolid implements Solid {
         }
         Hit bestHit = Hit.AtInfinity.axisAlignedGoingIn(ray.d());
 
-        if (boundingBox.firstHit(ray, afterTime, t).getClass() == Hit.AtInfinity.class) {
+        if (mojBoundingBox.firstHit(ray, afterTime, tFrame).getClass() == Hit.AtInfinity.class) {
             return bestHit;
         }
 
-        for (Triangle triangle: this.triangleList) {
-            Hit hit1 = triangle.firstHit(ray, 0);
-            if (hit1.getClass() == Hit.AtInfinity.class) {
-                continue;
+        Hit hit1 = this.triangleGroup.firstHit(ray, afterTime, tFrame);
+        if (hit1.getClass() == Hit.AtInfinity.class) {
+            return bestHit;
+        }
+        Triangle.HitTriangle hit = (Triangle.HitTriangle) hit1;
+
+        if (!temena.isEmpty()) {
+
+            double random = Math.random();
+
+            Vec3 tackaUdara = hit.getTackaUdara();
+
+            Vec3 v1 = temena.get(1).sub(temena.get(0));
+            Vec3 v2 = temena.get(3).sub(temena.get(0));
+            Vec3 v3 = tackaUdara.sub(temena.get(0));
+
+            double a = (v3.x() - v3.y() * v2.x() / v2.y()) / (v1.x() - v1.y() * v2.x() / v2.y());
+            double b = (v3.x() - a * v1.x()) / v2.x();
+
+            // a i b su ili u rasponu [0, 1] ili Infinity, NaN, ...
+
+            if (!Double.isFinite(a) || !Double.isFinite(b)) {
+                return bestHit;
             }
-            Triangle.HitTriangle hit = (Triangle.HitTriangle) hit1;
-            if (bestHit.t() > hit.t() && hit.t() > afterTime) {
 
-                if (!temena.isEmpty()) {
+            int x = (int) (a * transparency.length);
+            int y = (int) (b * transparency[0].length);
 
-                    double random = Math.random();
+            if (x >= transparency.length) x = transparency.length - 1;
+            if (y >= transparency[0].length) y = transparency[0].length - 1;
 
-                    Vec3 tackaUdara = hit.getTackaUdara();
+            if (x < 0) x = 0;
+            if (y < 0) y = 0;
 
-                    Vec3 v1 = temena.get(1).sub(temena.get(0));
-                    Vec3 v2 = temena.get(3).sub(temena.get(0));
-                    Vec3 v3 = tackaUdara.sub(temena.get(0));
+            if (random < transparency[x][y]) {
+                x = (int) (a * texture.length);
+                y = (int) (b * texture[0].length);
 
-                    double a = (v3.x() - v3.y() * v2.x() / v2.y()) / (v1.x() - v1.y() * v2.x() / v2.y());
-                    double b = (v3.x() - a * v1.x()) / v2.x();
+                if (x >= texture.length) x = texture.length - 1;
+                if (y >= texture[0].length) y = texture[0].length - 1;
 
-                    // a i b su ili u rasponu [0, 1] ili Infinity, NaN, ...
+                if (x < 0) x = 0;
+                if (y < 0) y = 0;
 
-                    if (!Double.isFinite(a) || !Double.isFinite(b)) {
-                        continue;
-                    }
-
-                    int x = (int) (a * transparency.length);
-                    int y = (int) (b * transparency[0].length);
-
-                    if (x >= transparency.length) x = transparency.length - 1;
-                    if (y >= transparency[0].length) y = transparency[0].length - 1;
-
-                    if (x < 0) x = 0;
-                    if (y < 0) y = 0;
-
-                    if (random < transparency[x][y]) {
-                        x = (int) (a * texture.length);
-                        y = (int) (b * texture[0].length);
-
-                        if (x >= texture.length) x = texture.length - 1;
-                        if (y >= texture[0].length) y = texture[0].length - 1;
-
-                        if (x < 0) x = 0;
-                        if (y < 0) y = 0;
-
-                        bestHit = new HitStlSolid(hit.t(), triangle.coef, Vector.xy(x, y));
-                    }
-                }
-                else {
-                    bestHit = new HitStlSolid(hit.t(), triangle.coef, Vector.ZERO);
-                }
+                bestHit = new HitStlSolid(hit.t(), hit.n_(), Vector.xy(x, y));
             }
+        }
+        else {
+            bestHit = new HitStlSolid(hit.t(), hit.n(), Vector.ZERO);
         }
 
         return bestHit;

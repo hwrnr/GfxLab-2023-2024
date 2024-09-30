@@ -1,13 +1,15 @@
 package xyz.marsavic.gfxlab.graphics3d.solids;
 
+import xyz.marsavic.gfxlab.graphics3d.BoundingBox;
 import xyz.marsavic.gfxlab.graphics3d.Hit;
 import xyz.marsavic.gfxlab.graphics3d.Ray;
 import xyz.marsavic.gfxlab.graphics3d.Solid;
 
+import java.util.Arrays;
 import java.util.Collection;
 
 
-public class Group implements Solid {
+public class Group extends Solid {
 
 	private final Solid[] solids;
 	
@@ -41,7 +43,12 @@ public class Group implements Solid {
 		
 		return minHit;
 	}
-	
+
+	@Override
+	public boolean intersects(BoundingBox boundingBox) {
+		return Arrays.stream(this.solids).anyMatch(t -> t.intersects(boundingBox)); // Ovo neću prosleđivati Milicinom algoritmu
+	}
+
 	@Override
 	public boolean hitBetween(Ray ray, double afterTime, double beforeTime, double tFrame) {
 		for (Solid solid : solids) {

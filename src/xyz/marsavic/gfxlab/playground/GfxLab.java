@@ -9,6 +9,7 @@ import xyz.marsavic.gfxlab.graphics3d.cameras.Perspective;
 import xyz.marsavic.gfxlab.graphics3d.cameras.ThinLensFOV;
 import xyz.marsavic.gfxlab.graphics3d.cameras.TransformedCamera;
 import xyz.marsavic.gfxlab.graphics3d.raytracing.Pathtracer;
+import xyz.marsavic.gfxlab.graphics3d.raytracing.Raytracer;
 import xyz.marsavic.gfxlab.graphics3d.raytracing.RaytracerSimple;
 import xyz.marsavic.gfxlab.graphics3d.scenes.*;
 import xyz.marsavic.gfxlab.gui.UtilsGL;
@@ -33,7 +34,7 @@ public class GfxLab {
 				e(Fs::frFrameToneMapping,
 						new EAggregator(
 								e(Fs::transformedColorFunction,
-										e(Pathtracer::new,
+										e(RaytracerSimple::new,
 												e(STLSceneTest::new),
 												e(TransformedCamera::new,
 														e(Perspective::new, e(0.5)),

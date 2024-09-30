@@ -6,7 +6,7 @@ import xyz.marsavic.gfxlab.Vec3;
 import xyz.marsavic.gfxlab.graphics3d.*;
 
 
-public class HalfSpace implements Solid {
+public class HalfSpace extends Solid {
 	
 	private final Vec3 p; // A point on the boundary plane
 	private final Vec3 e; // A vector parallel to the boundary plane.
@@ -36,8 +36,12 @@ public class HalfSpace implements Solid {
 		f_e = ef / eLSqr;
 		sinSqr = 1 - e_f * f_e;
 	}
-	
-	
+
+	@Override
+	public boolean intersects(BoundingBox boundingBox) {
+		return false; // Ovo neću prosleđivati Milicinom algoritmu
+	}
+
 	public static HalfSpace pef(Vec3 p, Vec3 e, Vec3 f, F1<Material, Vector> mapMaterial) {
 		return new HalfSpace(p, e, f, mapMaterial);
 	}

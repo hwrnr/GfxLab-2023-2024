@@ -3,14 +3,11 @@ package xyz.marsavic.gfxlab.graphics3d.solids;
 import xyz.marsavic.functions.F1;
 import xyz.marsavic.geometry.Vector;
 import xyz.marsavic.gfxlab.Vec3;
-import xyz.marsavic.gfxlab.graphics3d.Hit;
-import xyz.marsavic.gfxlab.graphics3d.Material;
-import xyz.marsavic.gfxlab.graphics3d.Ray;
-import xyz.marsavic.gfxlab.graphics3d.Solid;
+import xyz.marsavic.gfxlab.graphics3d.*;
 import xyz.marsavic.utils.Numeric;
 
 
-public class Ball implements Solid {
+public class Ball extends Solid {
 	
 	private final Vec3 c;
 	private final double r;
@@ -28,6 +25,11 @@ public class Ball implements Solid {
 		this.mapMaterial = mapMaterial;
 		rSqr = r * r;
 		inverted = r < 0;
+	}
+
+	@Override
+	public boolean intersects(BoundingBox boundingBox) {
+		return false; // Ovo neću prosleđivati Milicinom algoritmu
 	}
 	
 	
